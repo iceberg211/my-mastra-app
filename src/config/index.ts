@@ -57,6 +57,17 @@ const DEFAULT_RSS_SOURCES = [
 // 加载配置
 function loadConfig() {
   try {
+    // 确保环境变量已加载
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      try {
+        // 尝试加载 dotenv (同步方式)
+        require('dotenv').config();
+      } catch (error) {
+        // dotenv 不是必需的，忽略错误
+        console.warn('dotenv加载失败，请确保环境变量已正确设置');
+      }
+    }
+
     // 解析RSS源配置
     let rssSources = DEFAULT_RSS_SOURCES;
     if (process.env.RSS_SOURCES) {
@@ -67,9 +78,12 @@ function loadConfig() {
       }
     }
 
+    const apiKey = process.env.OPENAI_API_KEY?.trim() || '';
+    console.log('加载的API密钥长度:', apiKey.length); // 调试信息
+
     const config = {
       openai: {
-        apiKey: process.env.OPENAI_API_KEY || ''
+        apiKey
       },
       news: {
         apiKey: process.env.NEWS_API_KEY,
