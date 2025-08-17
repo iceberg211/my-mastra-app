@@ -2,12 +2,16 @@
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
-import { weatherWorkflow } from './workflows/weather-workflow';
-import { weatherAgent } from './agents/weather-agent';
+import { newsProcessingWorkflow } from './workflows/news-processing-workflow';
+import { contentProcessorAgent, contentAnalyzerAgent, contentRewriterAgent } from './agents/content-processor-agent';
 
 export const mastra = new Mastra({
-  workflows: { weatherWorkflow },
-  agents: { weatherAgent },
+  workflows: { newsProcessingWorkflow },
+  agents: {
+    contentProcessorAgent,
+    contentAnalyzerAgent,
+    contentRewriterAgent
+  },
   storage: new LibSQLStore({
     url: ":memory:",
   }),

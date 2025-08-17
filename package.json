@@ -6,7 +6,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
     "build": "mastra build",
-    "start": "mastra start"
+    "start": "mastra start",
+    "example": "npx tsx scripts/run-example.ts",
+    "example:basic": "npx tsx examples/basic-usage.ts",
+    "example:custom": "npx tsx examples/custom-sources.ts",
+    "test:tools": "npx tsx examples/test-tools.ts"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +35,7 @@
   "devDependencies": {
     "@types/node": "^24.3.0",
     "mastra": "^0.10.21",
+    "tsx": "^4.20.4",
     "typescript": "^5.9.2"
   }
 }
