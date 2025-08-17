@@ -1,7 +1,7 @@
-import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
+import { deepseek, DEEPSEEK_MODELS } from '../../config/deepseek';
 
 export const contentProcessorAgent = new Agent({
   name: 'Content Processor Agent',
@@ -46,7 +46,7 @@ export const contentProcessorAgent = new Agent({
 - 包含标题、摘要、正文、标签等字段
 - 提供内容质量评分和推荐理由
 `,
-  model: openai('gpt-4o'),
+  model: deepseek(DEEPSEEK_MODELS.CHAT),
   memory: new Memory({
     storage: new LibSQLStore({
       url: 'file:../mastra.db',
@@ -92,7 +92,7 @@ export const contentAnalyzerAgent = new Agent({
 - 优化建议
 - 是否推荐发布
 `,
-  model: openai('gpt-4o'),
+  model: deepseek(DEEPSEEK_MODELS.CHAT),
   memory: new Memory({
     storage: new LibSQLStore({
       url: 'file:../mastra.db',
@@ -142,7 +142,7 @@ export const contentRewriterAgent = new Agent({
 - 逻辑清晰，易于理解
 - 具有一定的传播价值
 `,
-  model: openai('gpt-4o'),
+  model: deepseek(DEEPSEEK_MODELS.CHAT),
   memory: new Memory({
     storage: new LibSQLStore({
       url: 'file:../mastra.db',

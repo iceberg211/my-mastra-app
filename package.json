@@ -10,7 +10,8 @@
     "example": "npx tsx scripts/run-example.ts",
     "example:basic": "npx tsx examples/basic-usage.ts",
     "example:custom": "npx tsx examples/custom-sources.ts",
-    "test:tools": "npx tsx examples/test-tools.ts"
+    "test:tools": "npx tsx examples/test-tools.ts",
+    "test:deepseek": "npx tsx examples/test-deepseek.ts"
   },
   "keywords": [],
   "author": "",
