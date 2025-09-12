@@ -4,13 +4,15 @@ import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
 import { newsProcessingWorkflow } from './workflows/news-processing-workflow';
 import { contentProcessorAgent, contentAnalyzerAgent, contentRewriterAgent } from './agents/content-processor-agent';
+import { frontendCodeReviewAgent } from './agents/frontend-code-review-agent';
 
 export const mastra = new Mastra({
   workflows: { newsProcessingWorkflow },
   agents: {
     contentProcessorAgent,
     contentAnalyzerAgent,
-    contentRewriterAgent
+    contentRewriterAgent,
+    frontendCodeReviewAgent
   },
   storage: new LibSQLStore({
     url: ":memory:",

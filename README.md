@@ -118,6 +118,28 @@ npm run build
 npm start
 ```
 
+### 通过 HTTP 调用前端代码审查 Agent
+
+启动本地服务后（`npm run dev` 或 `npm start`，默认端口 4111），可通过 HTTP 端点调用新增的前端代码审查 Agent：
+
+```
+POST http://localhost:4111/api/agents/frontendCodeReviewAgent/generate
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "请审查以下 React 代码，指出问题并给出修复建议：\n\n```tsx\nimport React, { useState, useEffect } from 'react';\nexport default function List({ items }) {\n  const [filter, setFilter] = useState('');\n  const filtered = items.filter(i => i.includes(filter));\n  useEffect(() => {\n    console.log('mounted');\n  }, [filtered]);\n  return (<ul>{filtered.map((x, idx) => <li key={idx}>{x}</li>)}</ul>);\n}\n```\n\n上下文: 使用 React 18，列表可能很大。"
+    }
+  ]
+}
+```
+
+响应为严格 JSON（不含多余文本），包含综合评分、问题列表、建议补丁等字段，便于在 CI/平台侧解析与展示。
+
+可改用流式接口：`POST /api/agents/frontendCodeReviewAgent/stream`（SSE）。
+
 ## 📊 系统架构
 
 ```mermaid
