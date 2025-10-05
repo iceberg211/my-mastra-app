@@ -1,128 +1,125 @@
 # 智能体资讯处理系统
 
-基于 Mastra 框架构建的智能化新闻资讯获取和处理系统，能够自动从多个数据源获取最新资讯，使用AI进行内容分析、重写和格式转换。
+基于 Mastra 框架构建的多智能体资讯处理平台，负责自动化抓取新闻、完成内容分析与重写，并提供前端代码审查 Agent 以支持多场景的生产力需求。
 
-## 🚀 功能特性
+## 项目概览
 
-- **多源资讯获取**: 支持RSS feeds、新闻API、网页抓取等多种数据源
-- **智能内容分析**: 使用DeepSeek AI分析文章质量和相关性
-- **内容重写优化**: AI重写文章，使其更适合目标受众
-- **格式转换**: 自动优化标题、段落结构，添加emoji等
-- **去重处理**: 智能识别和过滤重复内容
-- **质量评分**: 对文章进行质量评估和筛选
+- 通过 `newsProcessingWorkflow` 串联资讯抓取、去重、质量评估、重写与格式化输出
+- 默认集成 DeepSeek Chat/Coder 模型，并兼容 OpenAI API
+- 提供前端代码审查 Agent，可在本地服务或 CI 中直接调用
+- 统一使用 LibSQL 内存存储与 Pino 日志，便于开发调试
 
-## 📦 安装
+## 功能细节
+
+### 资讯处理流水线
+
+| 阶段     | 说明                                                                    | 关键实现                                                 |
+| -------- | ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| 采集聚合 | 支持 RSS、NewsAPI、网页抓取三类数据源，并自动过滤超出时间窗口内容       | `rssFetcherTool`、`newsApiFetcherTool`、`webScraperTool` |
+| 去重排序 | 基于标题指纹去重，并按发布时间降序排列                                  | `removeDuplicateArticles` 辅助函数                       |
+| 质量审查 | `contentAnalyzerAgent` 以流式方式给出 1-10 评分，失效时回退到长度启发式 | workflow `analyze-content` 步骤                          |
+| 重写优化 | `contentRewriterAgent` 根据目标风格/受众输出 JSON，缺省时保留原稿       | workflow `rewrite-content` 步骤                          |
+| 可发布化 | 调用格式化工具生成标题、摘要、标签、阅读时间等指标                      | `articleGeneratorTool`、`contentFormatterTool`           |
+
+### 工具与组件速览
+
+- `src/mastra/tools/news-fetcher-tool.ts`：聚合抓取器，内置新浪/网易/腾讯 RSS，支持自定义 API Key 与 CSS 选择器
+- `src/mastra/tools/format-converter-tool.ts`：标题优化、内容分段、Emoji 增强、SEO 标题裁剪、阅读时间估算
+- `src/mastra/agents/content-processor-agent.ts`：三段式内容处理智能体（处理、分析、重写）共享 `LibSQLStore` 记忆
+- `src/mastra/agents/frontend-code-review-agent.ts`：DeepSeek Coder 驱动，输出严格 JSON，包含问题列表与 `suggestedDiffs`
+- `scripts/run-example.ts`：交互式 CLI，可选择运行基础示例、定制源或工具测试并查看当前配置
+
+### 数据与日志
+
+- **记忆与缓存**：所有 Agent 使用 `LibSQLStore`（默认 `file:../mastra.db`）存储对话与上下文，避免重复请求
+- **日志体系**：`PinoLogger` 统一输出 `info` 级别日志，可通过 `LOG_LEVEL` 调整
+- **配置验证**：`src/config/index.ts` 采用 Zod 校验并允许通过 `RSS_SOURCES` JSON 覆盖默认源
+
+## 目录结构
+
+```
+.
+├── src
+│   ├── config/                 # AI 服务、新闻源与运行参数配置
+│   └── mastra/
+│       ├── agents/             # 内容处理与代码审查智能体定义
+│       ├── tools/              # 资讯抓取、格式转换等可复用工具
+│       └── workflows/          # Mastra 工作流编排（newsProcessingWorkflow）
+├── examples/                   # 关键功能示例与手动回归脚本
+├── scripts/                    # 实用脚本（如 run-example.ts）
+├── docs/                       # 补充文档与演示素材
+└── AGENTS.md                   # 贡献者指南（智能体开发注意事项）
+```
+
+## 环境与安装
+
+### 前置条件
+
+- Node.js ≥ 20.9.0
+- 推荐使用 `pnpm`（也可使用 `npm`，但仓库提供了 `pnpm-lock.yaml`）
+
+### 安装步骤
 
 ```bash
-# 克隆项目
 git clone <your-repo-url>
 cd my-mastra-app
-
-# 安装依赖
-npm install
-
-# 复制环境变量配置
+pnpm install
 cp .env.example .env
 ```
 
-## ⚙️ 配置
+## 环境变量说明
 
-编辑 `.env` 文件，设置必要的API密钥：
+- `DEEPSEEK_API_KEY`：必填，默认调用 DeepSeek 模型处理内容与代码
+- `OPENAI_API_KEY`：可选，若业务需切换 OpenAI，可保持 `config.openai` 校验通过
+- `NEWS_API_KEY`：可选，启用 NewsAPI 抓取时提供
+- `RSS_SOURCES`：JSON 字符串，重写默认 RSS 列表（示例见 `examples/custom-sources.ts`）
+- `DATABASE_URL`：LibSQL 连接地址，开发默认 `file:./mastra.db`
+- `LOG_LEVEL`：日志级别，支持 `debug|info|warn|error`
 
-```env
-# DeepSeek API密钥 (推荐 - 网络稳定)
-DEEPSEEK_API_KEY=your_deepseek_api_key_here
+## 快速上手
 
-# OpenAI API密钥 (备选)
-OPENAI_API_KEY=your_openai_api_key_here
+1. 启动服务：`pnpm dev`（默认在 `http://localhost:4111` 暴露 `/api/agents/*` 接口）
+2. 运行资讯处理示例：`pnpm run example:basic`
+3. 自定义新闻源示例：`pnpm run example:custom`
+4. 交互式菜单：`pnpm run example`（调用 `scripts/run-example.ts`）
 
-# 新闻API密钥 (可选)
-NEWS_API_KEY=your_news_api_key_here
+在业务代码中可直接运行工作流：
 
-# 网络代理配置 (如需要)
-USE_PROXY=false
-PROXY_HOST=127.0.0.1
-PROXY_PORT=7890
-PROXY_PROTOCOL=http
+```ts
+import { mastra } from "./src/mastra";
+import { getNewsSourcesConfig, getProcessingConfig } from "./src/config";
+
+const result = await mastra.runWorkflow("newsProcessingWorkflow", {
+  sources: getNewsSourcesConfig(),
+  ...getProcessingConfig(),
+});
+console.log(`完成处理：${result.summary.totalProcessed} 篇文章`);
 ```
 
-### AI 服务配置
+## 常用命令
 
-系统默认使用 **DeepSeek** 作为 AI 服务提供商，具有以下优势：
+| 命令                      | 作用                                             |
+| ------------------------- | ------------------------------------------------ |
+| `pnpm dev`                | 启动 Mastra 开发服务，热加载 `.mastra` 路由      |
+| `pnpm build`              | 构建可部署产物                                   |
+| `pnpm start`              | 使用构建结果启动生产模式实例                     |
+| `pnpm run example:basic`  | 执行基础资讯处理示例                             |
+| `pnpm run example:custom` | 测试自定义新闻源                                 |
+| `pnpm run example`        | 打开交互式 CLI，聚合示例与工具测试               |
+| `pnpm run test:deepseek`  | 验证 DeepSeek API 配置与 Content Processor Agent |
+| `pnpm run test:tools`     | 快速检查抓取及格式化工具链                       |
 
-- ✅ **网络稳定**: 国内服务器，连接更稳定
-- ✅ **中文优化**: 对中文内容处理效果更好
-- ✅ **成本效益**: 价格更有竞争力
-- ✅ **API兼容**: 完全兼容 OpenAI API
+## Mastra 工作流与智能体
 
-#### 获取 DeepSeek API Key
+- **newsProcessingWorkflow**：链式执行四大步骤，所有输入输出均用 Zod 校验，失败时自动记录警告继续处理
+- **contentProcessor / Analyzer / Rewriter Agents**：协同完成资讯评估、重写与结构化输出，使用 DeepSeek Chat 流式响应并带有 JSON fallback 逻辑
+- **frontendCodeReviewAgent**：DeepSeek Coder 驱动的代码审查专家，覆盖正确性、类型、性能、安全等维度，默认返回结构化 JSON（包含 `summary`、`score`、`findings`、`suggestedDiffs`、`checklist`）便于流水线消费
 
-1. 访问 [DeepSeek 官网](https://platform.deepseek.com/)
-2. 注册账号并登录
-3. 在控制台创建 API Key
-4. 将 API Key 添加到 `.env` 文件中
+## HTTP 接口
 
-## 🎯 快速开始
+启动本地服务后，可通过 HTTP 调用前端代码审查 Agent：
 
-### 基础使用
-
-```typescript
-import { mastra } from './src/mastra';
-import { getNewsSourcesConfig, getProcessingConfig } from './src/config';
-
-async function processNews() {
-  const sources = getNewsSourcesConfig();
-  const config = getProcessingConfig();
-  
-  const result = await mastra.runWorkflow('newsProcessingWorkflow', {
-    sources,
-    limit: config.limit,
-    hoursBack: config.hoursBack,
-    minQualityScore: config.minQualityScore,
-    maxArticles: config.maxArticles,
-    targetStyle: config.targetStyle,
-    targetAudience: config.targetAudience
-  });
-  
-  console.log(`处理了 ${result.summary.totalProcessed} 篇文章`);
-  return result.processedArticles;
-}
-```
-
-### 运行示例
-
-```bash
-# 基础使用示例
-npx tsx examples/basic-usage.ts
-
-# 自定义新闻源示例
-npx tsx examples/custom-sources.ts
-
-# 工具测试
-npx tsx examples/test-tools.ts
-
-# 测试 DeepSeek AI 配置
-npm run test:deepseek
-```
-
-## 🛠️ 开发
-
-```bash
-# 开发模式
-npm run dev
-
-# 构建
-npm run build
-
-# 启动
-npm start
-```
-
-### 通过 HTTP 调用前端代码审查 Agent
-
-启动本地服务后（`npm run dev` 或 `npm start`，默认端口 4111），可通过 HTTP 端点调用新增的前端代码审查 Agent：
-
-```
+```http
 POST http://localhost:4111/api/agents/frontendCodeReviewAgent/generate
 Content-Type: application/json
 
@@ -130,127 +127,45 @@ Content-Type: application/json
   "messages": [
     {
       "role": "user",
-      "content": "请审查以下 React 代码，指出问题并给出修复建议：\n\n```tsx\nimport React, { useState, useEffect } from 'react';\nexport default function List({ items }) {\n  const [filter, setFilter] = useState('');\n  const filtered = items.filter(i => i.includes(filter));\n  useEffect(() => {\n    console.log('mounted');\n  }, [filtered]);\n  return (<ul>{filtered.map((x, idx) => <li key={idx}>{x}</li>)}</ul>);\n}\n```\n\n上下文: 使用 React 18，列表可能很大。"
+      "content": "请审查以下组件并指出潜在性能问题: ..."
     }
   ]
 }
 ```
 
-响应为严格 JSON（不含多余文本），包含综合评分、问题列表、建议补丁等字段，便于在 CI/平台侧解析与展示。
+响应为严格 JSON，可直接解析字段：
 
-可改用流式接口：`POST /api/agents/frontendCodeReviewAgent/stream`（SSE）。
-
-## 📊 系统架构
-
-```mermaid
-graph LR
-    A[RSS/API/Web] --> B[内容获取]
-    B --> C[去重过滤]
-    C --> D[AI分析]
-    D --> E[内容重写]
-    E --> F[格式转换]
-    F --> G[输出结果]
-```
-
-### 核心模块
-
-1. **资讯获取模块**: RSS解析、API集成、网页抓取
-2. **内容处理模块**: AI分析、总结、重写
-3. **格式转换模块**: 标题优化、段落重构、emoji添加
-
-## 🔧 自定义配置
-
-### 新闻源配置
-
-```typescript
-const customSources = [
-  {
-    type: 'rss',
-    name: '自定义RSS源',
-    url: 'https://example.com/rss.xml',
-    category: '科技新闻'
-  },
-  {
-    type: 'api',
-    name: 'NewsAPI',
-    url: 'https://newsapi.org/v2/top-headlines',
-    category: '热点新闻',
-    apiKey: 'your-api-key'
-  }
-];
-```
-
-### 处理参数
-
-- `limit`: 每个源获取的文章数量 (默认: 10)
-- `hoursBack`: 获取多少小时内的文章 (默认: 24)
-- `minQualityScore`: 最低质量分数 1-10 (默认: 6)
-- `maxArticles`: 最多处理文章数量 (默认: 5)
-- `targetStyle`: 目标写作风格 (默认: 'engaging')
-- `targetAudience`: 目标受众 (默认: 'general')
-
-## 📝 输出格式
-
-处理后的文章包含以下字段：
-
-```typescript
+```json
 {
-  title: string;           // 优化后的标题
-  subtitle?: string;       // 副标题
-  content: string;         // 格式化的内容
-  summary: string;         // 文章摘要
-  tags: string[];          // 关键词标签
-  category: string;        // 文章分类
-  estimatedReadTime: number; // 预计阅读时间(分钟)
-  wordCount: number;       // 字数统计
-  author?: string;         // 作者
-  source?: string;         // 来源
-  publishDate: string;     // 发布日期
+  "summary": "整体质量良好，需优化 useEffect 依赖...",
+  "score": 78,
+  "findings": [ { "id": "perf-001", "severity": "high", ... } ],
+  "suggestedDiffs": [ { "file": "src/App.tsx", "before": "...", "after": "..." } ],
+  "checklist": { "correctness": true, "types": false, ... }
 }
 ```
 
-## 🔧 故障排除
+如需流式返回，可改用 `POST /api/agents/frontendCodeReviewAgent/stream` 获取 SSE。
 
-### 常见问题
+## 自定义与扩展
 
-#### 1. AI 服务连接失败
+- 在 `.env` 中设置 `RSS_SOURCES`（JSON 数组）即可覆盖默认新闻列表
+- 在 `examples/` 下复制脚本快速验证新工具或工作流，验证通过后迁移至 `src/`
+- 新增工具文件建议放置于 `src/mastra/tools`，并在工作流中通过 `createTool`/`createStep` 引入
+- `DEEPSEEK_MODELS` 支持 `CHAT` 与 `CODER`，可在代理中二选一或混合调用
+- 如需切换至 OpenAI，只需在 `src/config/deepseek.ts` 中替换为 `createOpenAI` 配置并提供 `OPENAI_API_KEY`
 
-**问题**: `Cannot connect to API: Connect Timeout Error`
+## 故障排除
 
-**解决方案**:
+- **AI 服务连接失败**：确认密钥有效、网络可达，运行 `pnpm run test:deepseek` 验证
+- **NewsAPI 请求报错**：检查 `NEWS_API_KEY` 是否设置，或确认 `category`、`query` 参数合法
+- **RSS 抓取为空**：确认源站可访问，或调低 `hoursBack` 扩大时间窗口
+- **JSON 解析失败**：AI 返回非结构化文本时，工作流会降级使用原始文章；建议在重写提示中明确 JSON 模板
 
-- 确保 DeepSeek API Key 已正确配置
-- 检查网络连接是否正常
-- 运行测试命令验证配置：`npm run test:deepseek`
+## 贡献
 
-#### 2. API Key 无效
+欢迎提交 Issue 与 PR，请先阅读 `AGENTS.md` 中的贡献指南，统一命名、命令与测试约定。
 
-**问题**: `Invalid API key`
-
-**解决方案**:
-
-- 检查 `.env` 文件中的 API Key 是否正确
-- 确保 API Key 有足够的额度
-- 验证 API Key 格式是否正确
-
-#### 3. 切换回 OpenAI
-
-如果需要切换回 OpenAI：
-
-1. 修改 `src/mastra/agents/content-processor-agent.ts`
-2. 将导入改为：`import { openai } from '@ai-sdk/openai';`
-3. 将模型配置改为：`model: openai('gpt-4o')`
-4. 确保设置了有效的 `OPENAI_API_KEY`
-
-### 获取帮助
-
-- 查看 [DeepSeek 文档](https://platform.deepseek.com/docs)
-- 提交 [GitHub Issue](https://github.com/your-repo/issues)
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
+## 许可证
 
 MIT License
