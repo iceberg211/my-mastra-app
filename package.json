@@ -11,7 +11,8 @@
     "example:basic": "npx tsx examples/basic-usage.ts",
     "example:custom": "npx tsx examples/custom-sources.ts",
     "test:tools": "npx tsx examples/test-tools.ts",
-    "test:deepseek": "npx tsx examples/test-deepseek.ts"
+    "test:deepseek": "npx tsx examples/test-deepseek.ts",
+    "example:ta-setup": "npx tsx scripts/run-ta-setup.ts"
   },
   "keywords": [],
   "author": "",
